@@ -99,7 +99,7 @@ def book_train(train_id):
             return jsonify({"error": "Invalid number of seats"}), 400
 
         # Fetch the train
-        train = Train.query.get(train_id)
+        train = Train.query.with_for_update().get(train_id)
 
         if not train:
             return jsonify({"error": "Train not found"}), 404
