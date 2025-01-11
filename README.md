@@ -44,7 +44,7 @@
 
   ### Description of the key folders:
 
-- `controllers`: Contains the logic to handle HTTP requests and responses.
+
 - `models`: Defines the structure of data entities such as books and members.
 - `routes`: Defines the API endpoints and ties everything together.
 - `services`: Contains business logic for adding, updating, deleting, and retrieving books and members.
