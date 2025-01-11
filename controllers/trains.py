@@ -191,6 +191,7 @@ def show_booking(booking_id):
 
          
 
+
 def show_booking_by_user(user_id):
     token = request.headers.get("Authorization")
     if not token:
@@ -206,6 +207,10 @@ def show_booking_by_user(user_id):
         
         if not user:
             return jsonify({"error": "You must be a valid user to access this booking"}), 401
+        
+        # Check if the logged-in user is requesting their own bookings
+        if str(user.id) != str(user_id):  # Ensure the user is only fetching their own bookings
+            return jsonify({"error": "You are not authorized to view this user's bookings"}), 403
         
         print(f"Looking for bookings for user ID: {user_id}")  # Debug log
         
@@ -237,3 +242,11 @@ def show_booking_by_user(user_id):
     
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+  
+                       
+        
+        
+        
+  
+     
+    
