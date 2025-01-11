@@ -88,8 +88,8 @@ def book_train(train_id):
         token = token[7:]
 
     try:
-        # Decode token and find user
-        decoded_data = decode_token(token=token)
+       
+        decoded_data = decode_token(token=token)  # Decode token and find user
         user = User.query.filter_by(email=decoded_data['email']).first()
 
         if not user:
@@ -98,18 +98,18 @@ def book_train(train_id):
         if not no_of_seats or no_of_seats <= 0:
             return jsonify({"error": "Invalid number of seats"}), 400
 
-        # Fetch the train
-        train = Train.query.with_for_update().get(train_id)
+        
+        train = Train.query.with_for_update().get(train_id) #using locking to prevent race condition in db
 
         if not train:
             return jsonify({"error": "Train not found"}), 404
 
-        # Check if enough seats are available
+        
         if train.seat_capacity < no_of_seats:
             return jsonify({"error": "Not enough seats available"}), 400
 
-        # Fetch existing bookings and calculate already booked seats
-        existing_bookings = Booking.query.filter_by(train_id=train_id).all()
+       
+        existing_bookings = Booking.query.filter_by(train_id=train_id).all()  # Fetch existing bookings and calculate already booked seats
         booked_seats = set()
 
         for booking in existing_bookings:
@@ -124,18 +124,18 @@ def book_train(train_id):
         total_seats = set(range(1, train.seat_capacity + len(booked_seats) + 1))
         available_seats = sorted(total_seats - booked_seats)
 
-        # Debugging output
+       
         print(f"Booked seats: {booked_seats}")
         print(f"Available seats: {available_seats}")
 
-        # Check again if enough seats are available
+       
         if len(available_seats) < no_of_seats:
             return jsonify({"error": "Not enough seats available"}), 400
 
-        # Assign seats
+        
         assigned_seats = available_seats[:no_of_seats]
 
-        # Create a new booking
+        
         new_booking = Booking(
             train_id=train_id,
             train_name=train.train_name,

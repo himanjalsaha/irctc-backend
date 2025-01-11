@@ -6,7 +6,7 @@ from .generate_token import decode_token
 def require_admin(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Extract token from the Authorization header
+  
         token = request.headers.get('Authorization')
         api_key = request.headers.get("API")
 
@@ -37,7 +37,6 @@ def require_admin(f):
             if not user:
                 return jsonify({'error': 'User not found'}), 404
             
-            # Check if the user has the 'admin' role
             if 'admin' not in [role.name for role in user.roles]:
                 return jsonify({'error': 'Access restricted to admins only'}), 403
             
