@@ -89,8 +89,8 @@ def book_train(train_id):
 
     try:
         # Decode token and find user
-        data = decode_token(token=token)
-        user = User.query.filter_by(email=data['email']).first()
+        decoded_data = decode_token(token=token)
+        user = User.query.filter_by(email=decoded_data['email']).first()
 
         if not user:
             return jsonify({"error": "You must be a valid user to book"}), 401
@@ -104,7 +104,11 @@ def book_train(train_id):
         if not train:
             return jsonify({"error": "Train not found"}), 404
 
-        # Fetch existing bookings and calculate available seats
+        # Check if enough seats are available
+        if train.seat_capacity < no_of_seats:
+            return jsonify({"error": "Not enough seats available"}), 400
+
+        # Fetch existing bookings and calculate already booked seats
         existing_bookings = Booking.query.filter_by(train_id=train_id).all()
         booked_seats = set()
 
@@ -117,15 +121,15 @@ def book_train(train_id):
             except Exception as e:
                 print(f"Error parsing seat_numbers: {e}")
 
-        total_seats = set(range(1, train.seat_capacity + 1))
+        total_seats = set(range(1, train.seat_capacity + len(booked_seats) + 1))
         available_seats = sorted(total_seats - booked_seats)
 
         # Debugging output
         print(f"Booked seats: {booked_seats}")
         print(f"Available seats: {available_seats}")
 
+        # Check again if enough seats are available
         if len(available_seats) < no_of_seats:
-            print(f"Available seats at the time of booking: {available_seats}")
             return jsonify({"error": "Not enough seats available"}), 400
 
         # Assign seats
@@ -137,19 +141,20 @@ def book_train(train_id):
             train_name=train.train_name,
             user_id=user.id,
             number_of_seats=no_of_seats,
-            seat_numbers=assigned_seats,
+            seat_numbers=",".join(map(str, assigned_seats)),  # Save as a string
             arrival_time_at_source=train.arrival_time_at_source,
             arrival_time_at_destination=train.arrival_time_at_destination
         )
         db.session.add(new_booking)
 
-        # Commit the transaction
+        # Update train seat capacity
+        train.seat_capacity -= no_of_seats
         db.session.commit()
 
         return jsonify({
             "message": "Booking successful",
             "train_name": train.train_name,
-            "remaining_seats": len(available_seats) - no_of_seats,
+            "remaining_seats": train.seat_capacity,
             "assigned_seats": assigned_seats,
             "user": user.email
         }), 200
