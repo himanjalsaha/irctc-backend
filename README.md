@@ -1,6 +1,4 @@
-# Arcitecture diagram
 
-![image](https://github.com/user-attachments/assets/561d4ad9-2c17-4828-8f40-2568bc50a4c0)
 
 
 
