@@ -59,7 +59,7 @@ def login():
             return jsonify({'error': 'Invalid  password'}), 401
         roles = [role.name for role in user.roles]
 
-        token  = generate_token(user.username ,  email , roles)
+        token  = generate_token( user.id , user.username ,  email , roles)
 
         return jsonify({'message': 'Login successful', 'token': token , "roles":roles }), 200
 

@@ -1,7 +1,7 @@
 import jwt
 
-def generate_token(username , email , role):
-    token = jwt.encode({"username" : username, "email" : email , "role" : role} , "hi3hri3ho" , algorithm="HS256")
+def generate_token( id  , username , email , role):
+    token = jwt.encode({ "id" : id , "username" : username, "email" : email , "role" : role} , "hi3hri3ho" , algorithm="HS256")
     return token
     
     
