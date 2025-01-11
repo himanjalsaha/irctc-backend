@@ -109,11 +109,13 @@ def book_train(train_id):
         booked_seats = set()
 
         for booking in existing_bookings:
-            # Ensure seat_numbers is parsed correctly
-            if isinstance(booking.seat_numbers, str):
-                booked_seats.update(map(int, booking.seat_numbers.split(',')))
-            elif isinstance(booking.seat_numbers, list):
-                booked_seats.update(booking.seat_numbers)
+            try:
+                if isinstance(booking.seat_numbers, str):
+                    booked_seats.update(map(int, booking.seat_numbers.split(',')))
+                elif isinstance(booking.seat_numbers, list):
+                    booked_seats.update(booking.seat_numbers)
+            except Exception as e:
+                print(f"Error parsing seat_numbers: {e}")
 
         total_seats = set(range(1, train.seat_capacity + 1))
         available_seats = sorted(total_seats - booked_seats)
@@ -123,6 +125,7 @@ def book_train(train_id):
         print(f"Available seats: {available_seats}")
 
         if len(available_seats) < no_of_seats:
+            print(f"Available seats at the time of booking: {available_seats}")
             return jsonify({"error": "Not enough seats available"}), 400
 
         # Assign seats
@@ -140,14 +143,13 @@ def book_train(train_id):
         )
         db.session.add(new_booking)
 
-        # Update train seat capacity
-        train.seat_capacity -= no_of_seats
+        # Commit the transaction
         db.session.commit()
 
         return jsonify({
             "message": "Booking successful",
             "train_name": train.train_name,
-            "remaining_seats": train.seat_capacity,
+            "remaining_seats": len(available_seats) - no_of_seats,
             "assigned_seats": assigned_seats,
             "user": user.email
         }), 200
@@ -155,6 +157,7 @@ def book_train(train_id):
     except Exception as e:
         # Debugging output for errors
         print(f"Error occurred: {str(e)}")
+        db.session.rollback()  # Rollback in case of errors
         return jsonify({"error": str(e)}), 500
 
 
