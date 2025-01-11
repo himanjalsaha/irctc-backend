@@ -1,6 +1,5 @@
 from flask import request , jsonify
 from datetime import datetime
-
 from models.Train import Train
 from utils.db import db
 from utils.decorators import require_admin
@@ -76,12 +75,13 @@ def book_train(train_id):
     data = request.get_json()
     token = request.headers.get("Authorization")
     no_of_seats = data.get("no_of_seats")
+   
     
     if not token:
         return jsonify({"error": "Token is missing"}), 403
     
     if token.startswith("Bearer "):
-        token = token[7:]  # Remove the 'Bearer ' prefix
+        token = token[7:]  
 
     try:
        
@@ -153,7 +153,7 @@ def show_booking(booking_id):
         return jsonify({"error": "Token is missing"}), 403
     
     if token.startswith("Bearer "):
-        token = token[7:]  # Remove 'Bearer ' from token
+        token = token[7:]  
     
     try:
         # Decode the token
@@ -190,10 +190,50 @@ def show_booking(booking_id):
         return jsonify({"error": str(e)}), 500
 
          
-            
-        
-        
-        
-  
-     
+
+def show_booking_by_user(user_id):
+    token = request.headers.get("Authorization")
+    if not token:
+        return jsonify({"error": "Token is missing"}), 403
     
+    if token.startswith("Bearer "):
+        token = token[7:]  # Remove 'Bearer ' prefix  
+    
+    try:
+        # Decode the token
+        data = decode_token(token=token)
+        user = User.query.filter_by(email=data['email']).first()
+        
+        if not user:
+            return jsonify({"error": "You must be a valid user to access this booking"}), 401
+        
+        print(f"Looking for bookings for user ID: {user_id}")  # Debug log
+        
+        bookings = Booking.query.filter_by(user_id=user_id).all()
+        
+        if not bookings:
+            return jsonify({"error": "No bookings found for this user"}), 404
+        
+        bookings_data = []
+        for booking in bookings:
+            arrival_time_at_source_str = booking.arrival_time_at_source.strftime('%H:%M:%S') if booking.arrival_time_at_source else None
+            arrival_time_at_destination_str = booking.arrival_time_at_destination.strftime('%H:%M:%S') if booking.arrival_time_at_destination else None
+
+            bookings_data.append({
+                "booking_id": booking.id,
+                "train_id": booking.train_id,
+                "train_name": booking.train_name,
+                "user_id": booking.user_id,
+                "number_of_seats": booking.number_of_seats,
+                "seat_numbers": booking.seat_numbers,
+                "arrival_time_at_source": arrival_time_at_source_str,
+                "arrival_time_at_destination": arrival_time_at_destination_str
+            })
+        
+        return jsonify({
+            "message": "Bookings retrieved successfully",
+            "bookings": bookings_data
+        }), 200
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

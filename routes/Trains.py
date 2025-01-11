@@ -1,5 +1,5 @@
 from flask import Blueprint
-from controllers.trains import add_train , check_availability, book_train , show_booking
+from controllers.trains import add_train , check_availability, book_train , show_booking , show_booking_by_user
 
 
 train_routes = Blueprint('train_routes', __name__)
@@ -11,3 +11,5 @@ train_routes.route("/api/trains/availability" , methods=["GET"])(check_availabil
 train_routes.route("/api/train/<train_id>/book" , methods=["POST"])(book_train)
 
 train_routes.route("/api/bookings/<booking_id>" , methods=["GET"])(show_booking)
+
+train_routes.route("/api/bookings/user/<user_id>" , methods=["GET"])(show_booking_by_user)
