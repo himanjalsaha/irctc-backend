@@ -8,47 +8,52 @@ from models.User import User
 from models.Booking import Booking
 @require_admin
 def add_train():
- try:
-    data = request.get_json()
-    train_name = data.get('train_name')
-    source = data.get('source')
-    destination = data.get('destination')
-    seat_capacity = data.get('seat_capacity')
-    arrival_time_at_source = data.get('arrival_time_at_source')
-    arrival_time_at_destination = data.get('arrival_time_at_destination')
-    
-    if not train_name or not source or not destination or not seat_capacity or not arrival_time_at_source or not arrival_time_at_destination:
+    try:
+        data = request.get_json()
+        train_name = data.get('train_name')
+        source = data.get('source')
+        destination = data.get('destination')
+        seat_capacity = data.get('seat_capacity')
+        arrival_time_at_source = data.get('arrival_time_at_source')
+        arrival_time_at_destination = data.get('arrival_time_at_destination')
+        
+        # Explicitly check for None instead of falsy values
+        if train_name is None or source is None or destination is None or seat_capacity is None or arrival_time_at_source is None or arrival_time_at_destination is None:
             return jsonify({'error': 'Missing required fields'}), 400
         
-    try:
-        arrival_time_at_source = datetime.strptime(arrival_time_at_source, '%H:%M').time()
-        arrival_time_at_destination = datetime.strptime(arrival_time_at_destination, '%H:%M').time()
-    except ValueError:
+        # Validate seat_capacity to ensure it's not negative
+        if not isinstance(seat_capacity, int) or seat_capacity < 0:
+            return jsonify({'error': 'Seat capacity must be a non-negative integer'}), 400
+        
+        # Validate time format
+        try:
+            arrival_time_at_source = datetime.strptime(arrival_time_at_source, '%H:%M').time()
+            arrival_time_at_destination = datetime.strptime(arrival_time_at_destination, '%H:%M').time()
+        except ValueError:
             return jsonify({'error': 'Invalid time format. Use HH:MM.'}), 400  
         
-    train  =  Train(
+        # Create a new train
+        train = Train(
             train_name=train_name,
             source=source,
             destination=destination,
             seat_capacity=seat_capacity,
             arrival_time_at_source=arrival_time_at_source,
             arrival_time_at_destination=arrival_time_at_destination
-    )     
-    
-    db.session.add(train)
-    db.session.commit()
+        )     
+        
+        db.session.add(train)
+        db.session.commit()
 
-       
-    return jsonify({
+        return jsonify({
             'status': 'Train added successfully',
             'train_id': train.id
         }), 201
-    
- except Exception as e:
-       db.session.rollback()  
-       return jsonify({'error': str(e)}), 500 
 
-    
+    except Exception as e:
+        db.session.rollback()  
+        return jsonify({'error': str(e)}), 500
+
     
     
     
@@ -75,50 +80,55 @@ def book_train(train_id):
     data = request.get_json()
     token = request.headers.get("Authorization")
     no_of_seats = data.get("no_of_seats")
-   
-    
+
     if not token:
         return jsonify({"error": "Token is missing"}), 403
-    
+
     if token.startswith("Bearer "):
-        token = token[7:]  
+        token = token[7:]
 
     try:
-       
+        # Decode token and find user
         data = decode_token(token=token)
         user = User.query.filter_by(email=data['email']).first()
-        
+
         if not user:
             return jsonify({"error": "You must be a valid user to book"}), 401
 
         if not no_of_seats or no_of_seats <= 0:
             return jsonify({"error": "Invalid number of seats"}), 400
 
+        # Fetch the train
         train = Train.query.get(train_id)
-        
+
         if not train:
             return jsonify({"error": "Train not found"}), 404
-        
-        
-        existing_bookings = Booking.query.filter_by(train_id=train_id).all() #chexckinh seats that r available
+
+        # Fetch existing bookings and calculate available seats
+        existing_bookings = Booking.query.filter_by(train_id=train_id).all()
         booked_seats = set()
-        
+
         for booking in existing_bookings:
-            booked_seats.update(booking.seat_numbers)
+            # Ensure seat_numbers is parsed correctly
+            if isinstance(booking.seat_numbers, str):
+                booked_seats.update(map(int, booking.seat_numbers.split(',')))
+            elif isinstance(booking.seat_numbers, list):
+                booked_seats.update(booking.seat_numbers)
 
         total_seats = set(range(1, train.seat_capacity + 1))
         available_seats = sorted(total_seats - booked_seats)
-        
+
+        # Debugging output
+        print(f"Booked seats: {booked_seats}")
+        print(f"Available seats: {available_seats}")
+
         if len(available_seats) < no_of_seats:
             return jsonify({"error": "Not enough seats available"}), 400
 
-        
-        assigned_seats = available_seats[:no_of_seats] #asssign the seats
-        
-      
-   
-        
-        
+        # Assign seats
+        assigned_seats = available_seats[:no_of_seats]
+
+        # Create a new booking
         new_booking = Booking(
             train_id=train_id,
             train_name=train.train_name,
@@ -129,8 +139,8 @@ def book_train(train_id):
             arrival_time_at_destination=train.arrival_time_at_destination
         )
         db.session.add(new_booking)
-        
-        
+
+        # Update train seat capacity
         train.seat_capacity -= no_of_seats
         db.session.commit()
 
@@ -143,6 +153,8 @@ def book_train(train_id):
         }), 200
 
     except Exception as e:
+        # Debugging output for errors
+        print(f"Error occurred: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
