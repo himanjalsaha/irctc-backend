@@ -6,10 +6,13 @@ from routes.users import user_routes
 from routes.Trains import train_routes
 from models.User import Role
 from utils.decorators import require_admin
+from flask_cors import CORS
 from flask import jsonify
 app = Flask(__name__)
+CORS(app)
 # PostgreSQL Database Configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://irctc_sgwa_user:v51yFXYmfdefCkGC7bdTVbaQcBVg9qgg@dpg-cu0d36pu0jms73cvclfg-a.singapore-postgres.render.com/irctc_sgwa'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 db.init_app(app)
 
